@@ -23,11 +23,8 @@ import org.apache.kafka.common.serialization.StringDeserializer;
 public class Main {
     public static void main(String[] args) throws InterruptedException {
         // remove INFO logs
-//        Logger.getLogger("org").setLevel(Level.ERROR);
-//        Logger.getLogger("akka").setLevel(Level.ERROR);
-
-        System.out.println("Hello world!");
-        System.out.println(System.getProperty("java.version"));
+        Logger.getLogger("org").setLevel(Level.ERROR);
+        Logger.getLogger("akka").setLevel(Level.ERROR);
 
         System.out.println("Spark Streaming started now .....");
 
