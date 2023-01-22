@@ -1,0 +1,6 @@
+/config
+/log
+/zookeeper
+/target
+docker-compose.yml
+env.list
