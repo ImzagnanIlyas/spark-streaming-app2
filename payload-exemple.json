@@ -1,0 +1,18 @@
+// Kafka Input Payload
+{
+  "values":{
+    "tempSoil": 0,
+    "tempAir": 0,
+    "humidity": 0,
+    "moisture": 0,
+    "ph": 0,
+    "npk": {
+      "n": 0,
+      "p": 0,
+      "k": 0
+    }
+  },
+  "timestamp": "23-01-2023 19:30:45",
+  "nodeId": 123456789,
+  "grid": "121"
+}
