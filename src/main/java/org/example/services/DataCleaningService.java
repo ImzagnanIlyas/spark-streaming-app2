@@ -19,7 +19,6 @@ public class DataCleaningService {
         {
             if(nodePayload.getNodeId() == 0) return false;
             if(nodePayload.getProductId() == 0) return false;
-            if(nodePayload.getGrid() == null) return false;
             if(nodePayload.getTimestamp() == null) return false;
             if(nodePayload.getValues() == null) return false;
 
@@ -62,14 +61,5 @@ public class DataCleaningService {
 
         return nodePayloadDatasetDataset;
     }
-
-//    public Dataset<NodePayload> removeOutliers(Dataset<NodePayload> nodePayloadDatasetDataset) {
-//        nodePayloadDatasetDataset = nodePayloadDatasetDataset.filter((FilterFunction<NodePayload>) nodePayload ->
-//        {
-//            return true;
-//        });
-//        return nodePayloadDatasetDataset;
-//    }
-
 
 }

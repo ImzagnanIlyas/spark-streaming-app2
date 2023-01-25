@@ -9,21 +9,23 @@ import org.apache.spark.sql.Dataset;
 import org.example.entities.NodePayload;
 import org.example.entities.Note;
 import org.example.entities.Thresholds;
+import org.example.entities.Trio;
 
 import java.io.IOException;
 import java.text.SimpleDateFormat;
+import java.util.Calendar;
 import java.util.Date;
 import java.util.Map;
+import java.util.Objects;
 
 public class DataValidationService {
-    FirebaseMessagingService firebaseMessagingService;
-    Map<Pair, Date> todaysNotifs;
+    Map<Trio, Date> todaysNotifs;
 
-    private enum TypeOfAlert{
+    public enum TypeOfAlert{
         MIN,
         MAX
     }
-    private enum Sensor{
+    public enum Sensor{
         TempSoil,
         TempAir,
         Humidity,
@@ -34,8 +36,7 @@ public class DataValidationService {
         K
     }
 
-    public DataValidationService() throws IOException {
-        this.firebaseMessagingService = new FirebaseMessagingService();
+    public DataValidationService() {
         this.todaysNotifs = new HashedMap();
     }
 
@@ -52,19 +53,27 @@ public class DataValidationService {
         Date date = new Date();
         SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
         data.put("DateTime", formatter.format(date));
-
-
         note.setData(data);
         try {
-            //TODO check before send
-            System.out.println("response : "+ firebaseMessagingService.sendNotification(note, "demo"));
+            //TODO To be checked with ilyas
+            if(this.todaysNotifs.containsKey(new Trio(nodeID, productId, sensor)) && this.sameDay(this.todaysNotifs.get(new Trio(nodeID, productId, sensor)), date)){
+                System.out.println("This notification was pushed today: key = "+ new Trio(nodeID, productId, sensor) + ", Value = "+date);
+            } else {
+                System.out.println("response : " + StorageService.sendNotification(note, "demo"));
+                this.todaysNotifs.put(new Trio(nodeID, productId, sensor), date);
+            }
         } catch (FirebaseMessagingException e) {
             System.out.println(e.getMessage());
+        }finally {
+            System.out.println(this.todaysNotifs);
         }
     }
 
-    public void validatePayload(Dataset<NodePayload> nodePayloadDatasetDataset, Thresholds thresholds){
+    public void validatePayload(Dataset<NodePayload> nodePayloadDatasetDataset, StorageService storageService){
         nodePayloadDatasetDataset.foreach((ForeachFunction<NodePayload>) nodePayload -> {
+            //TODO verify
+            Thresholds thresholds = storageService.readThresholdsFromDB(String.valueOf(nodePayload.getProductId()));
+
             if(nodePayload.getValues().getHumidity() < thresholds.getThresholdHumidityMin()) triggerAlert(TypeOfAlert.MIN,
                     Sensor.Humidity ,String.valueOf(nodePayload.getNodeId()) , String.valueOf(nodePayload.getProductId()), String.valueOf(nodePayload.getValues().getHumidity()));
             if(nodePayload.getValues().getHumidity() > thresholds.getThresholdHumidityMax()) triggerAlert(TypeOfAlert.MAX, Sensor.Humidity,String.valueOf(nodePayload.getNodeId()) , String.valueOf(nodePayload.getProductId()), String.valueOf(nodePayload.getValues().getHumidity()));
@@ -92,25 +101,18 @@ public class DataValidationService {
             
         });
     }
-    
+
     public boolean sameDay(Date date1, Date date2){
+        Calendar cal1 = Calendar.getInstance();
+        Calendar cal2 = Calendar.getInstance();
+        cal1.setTime(date1);
+        cal2.setTime(date2);
 
-        return false;
-    }
-
-    public class Pair{
-        public String nodeId;
-        public String productId;
-
-        public Pair(String nodeId, String productId) {
-            this.nodeId = nodeId;
-            this.productId = productId;
-        }
-
-        public Pair() {
-        }
+        if(cal1.get(Calendar.DAY_OF_YEAR) == cal2.get(Calendar.DAY_OF_YEAR)) return true;
+        else return false;
 
     }
+
 
 }
 

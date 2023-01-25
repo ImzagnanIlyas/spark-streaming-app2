@@ -11,6 +11,11 @@ import com.google.firebase.FirebaseOptions;
 import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
+import com.google.firebase.messaging.FirebaseMessaging;
+import com.google.firebase.messaging.FirebaseMessagingException;
+import com.google.firebase.messaging.Message;
+import com.google.firebase.messaging.Notification;
+import org.example.entities.Note;
 import org.example.entities.Thresholds;
 
 import java.io.FileInputStream;
@@ -27,6 +32,9 @@ public class StorageService {
     private static final String DATABASE_URL = "https://internet-of-tomato-farming-default-rtdb.firebaseio.com/";
     private FirebaseDatabase firebaseDatabase;
     private static Firestore firestore;
+    private static FirebaseApp firebaseApp;
+    private static FirebaseMessaging firebaseMessaging;
+
 
     public StorageService() {
         initializeFirebase();
@@ -35,17 +43,23 @@ public class StorageService {
     void initializeFirebase(){
         try {
             FileInputStream serviceAccount = new FileInputStream("src/main/resources/service-account-file.json");
+            FileInputStream serviceAccount2 = new FileInputStream("src/main/resources/service-account-file.json");
+
             FirebaseOptions options = FirebaseOptions.builder()
                     .setCredentials(GoogleCredentials.fromStream(serviceAccount))
                     .setDatabaseUrl(DATABASE_URL)
                     .build();
-            FirebaseApp.initializeApp(options);
+            firebaseApp = FirebaseApp.initializeApp(options);
 
             FirestoreOptions firestoreOptions = FirestoreOptions.newBuilder()
-                    .setCredentials(GoogleCredentials.fromStream(serviceAccount))
+                    .setCredentials(GoogleCredentials.fromStream(serviceAccount2))
                     .setProjectId("internet-of-tomato-farming")
                     .build();
             firestore = firestoreOptions.getService();
+
+            firebaseMessaging = FirebaseMessaging.getInstance(firebaseApp);
+
+
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
@@ -94,4 +108,23 @@ public class StorageService {
         }
         return thresholds;
     }
+
+
+    public static String sendNotification(Note note, String topic) throws FirebaseMessagingException {
+
+        Notification notification = Notification
+                .builder()
+                .setTitle(note.getSubject())
+                .setBody(note.getData().toString())
+                .build();
+
+        Message message = Message
+                .builder()
+                .setTopic(topic)
+                .setNotification(notification)
+                .build();
+
+        return firebaseMessaging.send(message);
+    }
+
 }

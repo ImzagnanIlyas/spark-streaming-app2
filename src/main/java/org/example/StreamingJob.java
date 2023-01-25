@@ -1,5 +1,6 @@
 package org.example;
 
+import org.apache.log4j.BasicConfigurator;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.apache.spark.api.java.function.FilterFunction;
@@ -13,8 +14,9 @@ import org.apache.spark.sql.types.StructType;
 import org.example.entities.NodePayload;
 import org.example.entities.SensorValues;
 import org.example.services.DataCleaningService;
-import scala.Function1;
-import scala.collection.JavaConversions;
+import org.example.services.DataValidationService;
+import org.example.services.StorageService;
+
 
 import java.util.ArrayList;
 import java.util.List;
@@ -24,7 +26,10 @@ public class StreamingJob {
 
     public static void main(String[] args) throws StreamingQueryException, TimeoutException {
         //init
+        BasicConfigurator.configure();
         DataCleaningService dataCleaningService = new DataCleaningService();
+        StorageService storageService = new StorageService();
+        DataValidationService dataValidationService = new DataValidationService();
 
         // remove INFO logs
         Logger.getLogger("org").setLevel(Level.ERROR);
@@ -33,18 +38,11 @@ public class StreamingJob {
         System.out.println("Hello world!");
         SparkSession spark = SparkSession.builder().appName("spark-app").master("spark://spark-master:7077")
                 .getOrCreate();
-//        SparkSession spark = SparkSession.builder().appName("MyStructuredStreamingJob").master("local[*]")
-//                .getOrCreate();
 
         Dataset<Row> df = spark.readStream().format("kafka").option("kafka.bootstrap.servers", "kafka:9092")
                 .option("subscribe", "demo").option("includeHeaders", "true").load();
-//        Dataset<Row> df = spark.readStream().format("kafka").option("kafka.bootstrap.servers", "localhost:9095")
-//                .option("subscribe", "demo").option("includeHeaders", "true").load();
 
         df = df.selectExpr("CAST(topic AS STRING)", "CAST(partition AS STRING)", "CAST(offset AS STRING)", "CAST(value AS STRING)");
-
-//        StructType emp_schema = new StructType().add("name", DataTypes.StringType).add("age", DataTypes.StringType)
-//                .add("country", DataTypes.StringType);
 
         List<StructField> fieldsOfNpkField = new ArrayList<>();
         fieldsOfNpkField.add(new StructField("n", DataTypes.DoubleType, true, Metadata.empty()));
@@ -68,7 +66,6 @@ public class StreamingJob {
         });
 
         df = df.select(functions.col("topic"), functions.col("partition"), functions.col("offset"), functions.from_json(functions.col("value"), schema).alias("data"));
-        //df = df.select("data.*");
         df = df.select("topic", "partition", "offset", "data.*");
 
         Dataset<Row> responseWithSelectedColumns = df.select(functions.col("values"),
@@ -81,15 +78,24 @@ public class StreamingJob {
         Dataset<NodePayload> nodePayloadDatasetDataset = responseWithSelectedColumns
                 .as(Encoders.bean(NodePayload.class));
 
+        //Processing
         nodePayloadDatasetDataset = dataCleaningService.removeMissingValues(nodePayloadDatasetDataset);
+        nodePayloadDatasetDataset = dataCleaningService.removeNoiseAndIncorrectData(nodePayloadDatasetDataset);
+        dataValidationService.validatePayload(nodePayloadDatasetDataset, storageService);
+        //TODO ilyas : add the function to save in real-time database
+        //TODO ilyas : add the function to save aggregation in real-time database
+
 
         StreamingQuery query = df.writeStream().format("console").option("truncate", "False").start();
         StreamingQuery query1 = nodePayloadDatasetDataset.writeStream()
                 .format("console")
                 .start();
 
-
         query.awaitTermination();
         query1.awaitTermination();
     }
+
+
+
+
 }
