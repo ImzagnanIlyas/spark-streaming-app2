@@ -2,16 +2,19 @@ package org.example;
 
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
-import org.apache.spark.sql.Dataset;
-import org.apache.spark.sql.Row;
-import org.apache.spark.sql.SparkSession;
+import org.apache.spark.api.java.function.FilterFunction;
+import org.apache.spark.sql.*;
 import org.apache.spark.sql.streaming.StreamingQuery;
 import org.apache.spark.sql.streaming.StreamingQueryException;
 import org.apache.spark.sql.types.DataTypes;
 import org.apache.spark.sql.types.Metadata;
 import org.apache.spark.sql.types.StructField;
 import org.apache.spark.sql.types.StructType;
-import org.apache.spark.sql.functions;
+import org.example.entities.NodePayload;
+import org.example.entities.SensorValues;
+import org.example.services.DataCleaningService;
+import scala.Function1;
+import scala.collection.JavaConversions;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -20,6 +23,9 @@ import java.util.concurrent.TimeoutException;
 public class StreamingJob {
 
     public static void main(String[] args) throws StreamingQueryException, TimeoutException {
+        //init
+        DataCleaningService dataCleaningService = new DataCleaningService();
+
         // remove INFO logs
         Logger.getLogger("org").setLevel(Level.ERROR);
         Logger.getLogger("akka").setLevel(Level.ERROR);
@@ -57,13 +63,33 @@ public class StreamingJob {
                 new StructField("values", DataTypes.createStructType(fieldsOfValuesField), true, Metadata.empty()),
                 new StructField("timestamp", DataTypes.TimestampType, true, Metadata.empty()),
                 new StructField("nodeId", DataTypes.IntegerType, true, Metadata.empty()),
+                new StructField("productId", DataTypes.IntegerType, true, Metadata.empty()),
                 new StructField("grid", DataTypes.StringType, true, Metadata.empty()),
         });
 
         df = df.select(functions.col("topic"), functions.col("partition"), functions.col("offset"), functions.from_json(functions.col("value"), schema).alias("data"));
+        //df = df.select("data.*");
         df = df.select("topic", "partition", "offset", "data.*");
 
+        Dataset<Row> responseWithSelectedColumns = df.select(functions.col("values"),
+                functions.col("timestamp"), functions.col("nodeId"), functions.col("productId"),functions.col("grid"), functions.col("values").getField("tempSoil")
+                , functions.col("values").getField("tempAir") , functions.col("values").getField("humidity")
+                , functions.col("values").getField("moisture") , functions.col("values").getField("ph")
+                , functions.col("values").getField("npk").getField("n"), functions.col("values").getField("npk").getField("p")
+                , functions.col("values").getField("npk").getField("k"));
+
+        Dataset<NodePayload> nodePayloadDatasetDataset = responseWithSelectedColumns
+                .as(Encoders.bean(NodePayload.class));
+
+        nodePayloadDatasetDataset = dataCleaningService.removeMissingValues(nodePayloadDatasetDataset);
+
         StreamingQuery query = df.writeStream().format("console").option("truncate", "False").start();
+        StreamingQuery query1 = nodePayloadDatasetDataset.writeStream()
+                .format("console")
+                .start();
+
+
         query.awaitTermination();
+        query1.awaitTermination();
     }
 }

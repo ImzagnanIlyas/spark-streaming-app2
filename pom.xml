@@ -13,7 +13,20 @@
         <maven.compiler.target>11</maven.compiler.target>
     </properties>
 
+
     <dependencies>
+        <dependency>
+            <groupId>com.google.cloud</groupId>
+            <artifactId>google-cloud-firestore</artifactId>
+            <version>3.7.8</version>
+        </dependency>
+
+        <dependency>
+            <groupId>com.google.firebase</groupId>
+            <artifactId>firebase-admin</artifactId>
+            <version>9.1.1</version>
+        </dependency>
+
         <dependency>
             <groupId>org.apache.spark</groupId>
             <artifactId>spark-core_2.12</artifactId>
@@ -29,6 +42,7 @@
 <!--            <artifactId>spark-streaming-kafka_2.10</artifactId>-->
 <!--            <version>1.6.2</version>-->
 <!--        </dependency>-->
+
         <dependency>
             <groupId>org.apache.spark</groupId>
             <artifactId>spark-streaming-kafka-0-10_2.12</artifactId>
@@ -69,6 +83,8 @@
             <type>maven-plugin</type>
         </dependency>
 
+
+
     </dependencies>
 
     <build>
@@ -96,6 +112,7 @@
                     </execution>
                 </executions>
             </plugin>
+
         </plugins>
     </build>
 </project>
