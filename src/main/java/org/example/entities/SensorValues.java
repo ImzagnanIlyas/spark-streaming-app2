@@ -15,6 +15,8 @@ public class SensorValues implements Serializable {
     private double ph;
     private NpkPayload npk;
 
+    public SensorValues() {}
+
     public double getTempSoil() {
         return tempSoil;
     }

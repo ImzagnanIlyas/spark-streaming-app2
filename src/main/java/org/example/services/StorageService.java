@@ -16,6 +16,7 @@ import com.google.firebase.messaging.Notification;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.functions;
+import org.example.entities.AggregationData;
 import org.example.entities.NodePayload;
 import org.example.entities.Note;
 import org.example.entities.Thresholds;
@@ -112,6 +113,47 @@ public class StorageService {
         } catch (InterruptedException e) {
             throw new RuntimeException(e);
         }
+    }
+
+    /**
+     * Set up a firebase listener to update a product's aggregation data
+     * whenever one of its nodes update its values
+     * */
+    public void setUpdateAggregationDataListener(){
+        DatabaseReference productsRef = firebaseDatabase.getReference("products/");
+        productsRef.addChildEventListener(new ChildEventListener() {
+            @Override
+            public void onChildAdded(DataSnapshot dataSnapshot, String prevChildKey) {}
+            @Override
+            public void onChildChanged(DataSnapshot dataSnapshot, String prevChildKey) {
+                AggregationData aggregationData = new AggregationData();
+                dataSnapshot.child("nodes").getChildren().forEach(dataSnapshot1 -> {
+                    NodePayload payload = dataSnapshot1.getValue(NodePayload.class);
+                    aggregationData.sumNodeValues(payload.getValues());
+                });
+                aggregationData.divideByNodesNumber(dataSnapshot.child("nodes").getChildrenCount());
+                updateAggregationDataInRTDB(dataSnapshot.getKey(), aggregationData);
+            }
+            @Override
+            public void onChildRemoved(DataSnapshot dataSnapshot) {}
+            @Override
+            public void onChildMoved(DataSnapshot dataSnapshot, String prevChildKey) {}
+            @Override
+            public void onCancelled(DatabaseError databaseError) {}
+        });
+    }
+
+    /**
+     * Update aggregation data for a specific product
+     *
+     * @param productKey the product key to be updated
+     * @param aggregationData the new data to be saved
+     * */
+    public void updateAggregationDataInRTDB(String productKey, AggregationData aggregationData){
+        DatabaseReference productsRef = firebaseDatabase.getReference("products/"+productKey);
+        Map<String, Object> productUpdates = new HashMap<>();
+        productUpdates.put("aggregation", aggregationData);
+        productsRef.updateChildrenAsync(productUpdates);
     }
 
     public Thresholds readThresholdsFromDB(String productId) throws ExecutionException, InterruptedException {

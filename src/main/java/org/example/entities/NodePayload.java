@@ -13,6 +13,8 @@ public class NodePayload implements Serializable {
     private int nodeId;
     private int productId;
 
+    public NodePayload() {}
+
     @Override
     public String toString() {
         return "NodePayload{" +

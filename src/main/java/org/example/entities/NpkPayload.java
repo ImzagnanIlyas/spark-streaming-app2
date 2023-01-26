@@ -8,6 +8,8 @@ public class NpkPayload implements Serializable {
     private double p;
     private double k;
 
+    public NpkPayload() {}
+
     public double getN() {
         return n;
     }
