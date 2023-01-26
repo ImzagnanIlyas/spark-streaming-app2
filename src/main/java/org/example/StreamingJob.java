@@ -81,7 +81,7 @@ public class StreamingJob {
         nodePayloadDatasetDataset = dataCleaningService.removeNoiseAndIncorrectData(nodePayloadDatasetDataset);
         dataValidationService.validatePayload(nodePayloadDatasetDataset, storageService);
         storageService.saveDatasetToRTDB(nodePayloadDatasetDataset);
-        //TODO ilyas : add the function to save aggregation in real-time database
+        storageService.setUpdateAggregationDataListener(); // must be called only once
 
 
         StreamingQuery query = df.writeStream().format("console").option("truncate", "False").start();

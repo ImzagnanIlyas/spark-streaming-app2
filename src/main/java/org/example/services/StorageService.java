@@ -117,7 +117,8 @@ public class StorageService {
 
     /**
      * Set up a firebase listener to update a product's aggregation data
-     * whenever one of its nodes update its values
+     * whenever one of its nodes update its values.
+     * The function must be called only once during the lifetime of the application
      * */
     public void setUpdateAggregationDataListener(){
         DatabaseReference productsRef = firebaseDatabase.getReference("products/");
