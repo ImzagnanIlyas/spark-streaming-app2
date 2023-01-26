@@ -8,25 +8,25 @@ import com.google.cloud.firestore.Firestore;
 import com.google.cloud.firestore.FirestoreOptions;
 import com.google.firebase.FirebaseApp;
 import com.google.firebase.FirebaseOptions;
-import com.google.firebase.database.DatabaseError;
-import com.google.firebase.database.DatabaseReference;
-import com.google.firebase.database.FirebaseDatabase;
+import com.google.firebase.database.*;
 import com.google.firebase.messaging.FirebaseMessaging;
 import com.google.firebase.messaging.FirebaseMessagingException;
 import com.google.firebase.messaging.Message;
 import com.google.firebase.messaging.Notification;
+import org.apache.spark.sql.Dataset;
+import org.apache.spark.sql.Row;
+import org.apache.spark.sql.functions;
+import org.example.entities.NodePayload;
 import org.example.entities.Note;
 import org.example.entities.Thresholds;
 
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Scanner;
+import java.util.*;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.atomic.AtomicReference;
 
 public class StorageService {
     private static final String DATABASE_URL = "https://internet-of-tomato-farming-default-rtdb.firebaseio.com/";
@@ -59,33 +59,53 @@ public class StorageService {
 
             firebaseMessaging = FirebaseMessaging.getInstance(firebaseApp);
 
-
+            firebaseDatabase = FirebaseDatabase.getInstance();
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
     }
 
     /**
-     * Save new coming data to firebase
+     * Save new coming data to firebase RTDB
+     * Does not contain CountDownLatch, to be used in SparkJob
      *
-     * @param nodes new rows to be saved
+     * @param payloadDataset dataset of NodePayload to be saved in RTDB
      * */
-    public <T> void savePayloadsToRTDB(Map<String, T> nodes){
-        final FirebaseDatabase database = FirebaseDatabase.getInstance();
-        DatabaseReference nodesRef = database.getReference("products/123456789/nodes");
+    public void saveDatasetToRTDB(Dataset<NodePayload> payloadDataset){
+        DatabaseReference productsRef = firebaseDatabase.getReference("products/");
+        Map<String, Object> productUpdates = new HashMap<>();
 
+        payloadDataset.collectAsList().forEach(nodePayload -> {
+            String nodePath = nodePayload.getProductId()+"/nodes/"+nodePayload.getNodeId();
+            productUpdates.put(nodePath, nodePayload);
+        });
+
+        productsRef.updateChildrenAsync(productUpdates);
+    }
+
+    /**
+     * Save new coming data to firebase RTDB,
+     * Function for testing, contain CountDownLatch
+     *
+     * @param payloadDataset dataset of NodePayload to be saved in RTDB
+     * */
+    public void saveDatasetToRTDBForTest(Dataset<NodePayload> payloadDataset){
         CountDownLatch done = new CountDownLatch(1);
-//        nodesRef.setValueAsync(nodes);
-        nodesRef.setValue(nodes,  new DatabaseReference.CompletionListener() {
-            @Override
-            public void onComplete(DatabaseError databaseError, DatabaseReference databaseReference) {
-                if (databaseError != null) {
-                    System.out.println("Data could not be saved " + databaseError.getMessage());
-                } else {
-                    System.out.println("Data saved successfully.");
-                }
-                done.countDown();
+        DatabaseReference productsRef = firebaseDatabase.getReference("products/");
+        Map<String, Object> productUpdates = new HashMap<>();
+
+        payloadDataset.collectAsList().forEach(nodePayload -> {
+            String nodePath = nodePayload.getProductId()+"/nodes/"+nodePayload.getNodeId();
+            productUpdates.put(nodePath, nodePayload);
+        });
+
+        productsRef.updateChildren(productUpdates, (databaseError, databaseReference) -> {
+            if (databaseError != null) {
+                System.out.println("Data could not be saved " + databaseError.getMessage());
+            } else {
+                System.out.println("Data saved successfully.");
             }
+            done.countDown();
         });
         try {
             done.await();

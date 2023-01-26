@@ -82,7 +82,7 @@ public class StreamingJob {
         nodePayloadDatasetDataset = dataCleaningService.removeMissingValues(nodePayloadDatasetDataset);
         nodePayloadDatasetDataset = dataCleaningService.removeNoiseAndIncorrectData(nodePayloadDatasetDataset);
         dataValidationService.validatePayload(nodePayloadDatasetDataset, storageService);
-        //TODO ilyas : add the function to save in real-time database
+        storageService.saveDatasetToRTDB(nodePayloadDatasetDataset);
         //TODO ilyas : add the function to save aggregation in real-time database
 
 
