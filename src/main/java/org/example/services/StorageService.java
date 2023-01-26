@@ -43,8 +43,10 @@ public class StorageService {
 
     void initializeFirebase(){
         try {
-            FileInputStream serviceAccount = new FileInputStream("src/main/resources/service-account-file.json");
-            FileInputStream serviceAccount2 = new FileInputStream("src/main/resources/service-account-file.json");
+            InputStream serviceAccount = getClass().getResourceAsStream("/service-account-file.json");
+            InputStream serviceAccount2 = getClass().getResourceAsStream("/service-account-file.json");
+            assert serviceAccount != null;
+            assert serviceAccount2 != null;
 
             FirebaseOptions options = FirebaseOptions.builder()
                     .setCredentials(GoogleCredentials.fromStream(serviceAccount))
