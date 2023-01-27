@@ -17,6 +17,7 @@ import java.util.Calendar;
 import java.util.Date;
 import java.util.Map;
 import java.util.Objects;
+import java.util.concurrent.ExecutionException;
 
 public class DataValidationService {
     Map<Trio, Date> todaysNotifs;
@@ -70,9 +71,10 @@ public class DataValidationService {
     }
 
     public void validatePayload(Dataset<NodePayload> nodePayloadDatasetDataset, StorageService storageService){
-        nodePayloadDatasetDataset.foreach((ForeachFunction<NodePayload>) nodePayload -> {
+        nodePayloadDatasetDataset.collectAsList().forEach((nodePayload -> {
             //TODO verify
             Thresholds thresholds = storageService.readThresholdsFromDB(String.valueOf(nodePayload.getProductId()));
+            if (thresholds == null) return; // to avoid blocking the program if there are no thresholds in DB
 
             if(nodePayload.getValues().getHumidity() < thresholds.getThresholdHumidityMin()) triggerAlert(TypeOfAlert.MIN,
                     Sensor.Humidity ,String.valueOf(nodePayload.getNodeId()) , String.valueOf(nodePayload.getProductId()), String.valueOf(nodePayload.getValues().getHumidity()));
@@ -99,7 +101,7 @@ public class DataValidationService {
             if(nodePayload.getValues().getNpk().getK() < thresholds.getThresholdKMin()) triggerAlert(TypeOfAlert.MIN, Sensor.K,String.valueOf(nodePayload.getNodeId()) , String.valueOf(nodePayload.getProductId()), String.valueOf(nodePayload.getValues().getNpk().getK()));
             if(nodePayload.getValues().getNpk().getK() > thresholds.getThresholdKMax()) triggerAlert(TypeOfAlert.MAX, Sensor.K,String.valueOf(nodePayload.getNodeId()) , String.valueOf(nodePayload.getProductId()), String.valueOf(nodePayload.getValues().getNpk().getK()));
             
-        });
+        }));
     }
 
     public boolean sameDay(Date date1, Date date2){

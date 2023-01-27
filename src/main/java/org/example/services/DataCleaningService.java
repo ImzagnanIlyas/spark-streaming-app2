@@ -46,15 +46,15 @@ public class DataCleaningService {
         // pH sensor: 0 and 14
         nodePayloadDatasetDataset = nodePayloadDatasetDataset.filter((FilterFunction<NodePayload>) nodePayload ->
         {
-            if(nodePayload.getValues().getHumidity() < 100 && nodePayload.getValues().getHumidity() > 0) return false;
-            if(nodePayload.getValues().getMoisture() < 100 && nodePayload.getValues().getMoisture() > 0) return false;
-            if(nodePayload.getValues().getTempSoil() < 85 && nodePayload.getValues().getTempSoil() > -40) return false;
-            if(nodePayload.getValues().getTempAir() < 85 && nodePayload.getValues().getTempAir() > -40) return false;
-            if(nodePayload.getValues().getPh() < 14 && nodePayload.getValues().getPh() > 0) return false;
+            if(nodePayload.getValues().getHumidity() > 100 || nodePayload.getValues().getHumidity() < 0) return false;
+            if(nodePayload.getValues().getMoisture() > 100 || nodePayload.getValues().getMoisture() < 0) return false;
+            if(nodePayload.getValues().getTempSoil() > 85 || nodePayload.getValues().getTempSoil() < -40) return false;
+            if(nodePayload.getValues().getTempAir() > 85 || nodePayload.getValues().getTempAir() < -40) return false;
+            if(nodePayload.getValues().getPh() > 14 || nodePayload.getValues().getPh() < 0) return false;
 
-            if(nodePayload.getValues().getNpk().getN() < 10000 && nodePayload.getValues().getNpk().getN() > 0) return false;
-            if(nodePayload.getValues().getNpk().getP() < 3000 && nodePayload.getValues().getNpk().getP() > 0) return false;
-            if(nodePayload.getValues().getNpk().getK() < 10000 && nodePayload.getValues().getNpk().getK() > 0) return false;
+            if(nodePayload.getValues().getNpk().getN() > 10000 || nodePayload.getValues().getNpk().getN() < 0) return false;
+            if(nodePayload.getValues().getNpk().getP() > 3000 || nodePayload.getValues().getNpk().getP() < 0) return false;
+            if(nodePayload.getValues().getNpk().getK() > 10000 || nodePayload.getValues().getNpk().getK() < 0) return false;
 
             return true;
         });

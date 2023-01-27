@@ -86,6 +86,13 @@ public class StorageService {
         productsRef.updateChildrenAsync(productUpdates);
     }
 
+    public void saveRecordToRTDB(NodePayload record){
+        DatabaseReference nodeRef = firebaseDatabase.
+                getReference("products/"+record.getProductId()+"/nodes/"+record.getNodeId());
+
+        nodeRef.setValueAsync(record);
+    }
+
     /**
      * Save new coming data to firebase RTDB,
      * Function for testing, contain CountDownLatch
@@ -144,6 +151,7 @@ public class StorageService {
             @Override
             public void onCancelled(DatabaseError databaseError) {}
         });
+        System.out.println("[Set up UpdateAggregationDataListener successfully]");
     }
 
     /**
@@ -159,17 +167,20 @@ public class StorageService {
         productsRef.updateChildrenAsync(productUpdates);
     }
 
-    public Thresholds readThresholdsFromDB(String productId) throws ExecutionException, InterruptedException {
+    public Thresholds readThresholdsFromDB(String productId){
         DocumentReference documentReference = firestore.collection("usersData").document(productId);
         ApiFuture<DocumentSnapshot> future = documentReference.get();
-        DocumentSnapshot documentSnapshot = future.get();
+        DocumentSnapshot documentSnapshot = null;
+        try {
+            documentSnapshot = future.get();
+        } catch (InterruptedException | ExecutionException e) {
+            throw new RuntimeException(e);
+        }
         Thresholds thresholds = null;
         if(documentSnapshot.exists()) {
             thresholds = documentSnapshot.toObject(Thresholds.class);
-            System.out.println(thresholds);
-            System.out.println("Document data: " + documentSnapshot.getData());
         }else {
-            System.out.println("No such doc");
+            System.out.println("[Thresholds not found for product: "+productId+']');
         }
         return thresholds;
     }
