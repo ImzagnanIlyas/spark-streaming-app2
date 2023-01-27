@@ -44,8 +44,53 @@ public class StreamingJob {
         Dataset<Row> df = spark.readStream().format("kafka").option("kafka.bootstrap.servers", "kafka:9092")
                 .option("subscribe", "demo").option("includeHeaders", "true").load();
 
-        df = df.selectExpr("CAST(topic AS STRING)", "CAST(partition AS STRING)", "CAST(offset AS STRING)", "CAST(value AS STRING)");
+        df = df.selectExpr("CAST(topic AS STRING)", "CAST(partition AS STRING)", "CAST(offset AS STRING)",
+                "CAST(value AS STRING)");
 
+        StructType schema = getPayloadSchema();
+
+        df = df.select(functions.col("topic"), functions.col("partition")
+                , functions.col("offset")
+                , functions.from_json(functions.col("value"), schema).alias("data")
+        );
+        df = df.select("topic", "partition", "offset", "data.*");
+
+        Dataset<Row> responseWithSelectedColumns = df.select(functions.col("values"),
+                functions.col("timestamp"), functions.col("nodeId"), functions.col("productId")
+                , functions.col("values").getField("tempSoil")
+                , functions.col("values").getField("tempAir")
+                , functions.col("values").getField("humidity")
+                , functions.col("values").getField("moisture")
+                , functions.col("values").getField("ph")
+                , functions.col("values").getField("npk").getField("n")
+                , functions.col("values").getField("npk").getField("p")
+                , functions.col("values").getField("npk").getField("k")
+        );
+
+        Dataset<NodePayload> nodePayloadDatasetDataset = responseWithSelectedColumns
+                .as(Encoders.bean(NodePayload.class));
+
+        // Set UpdateAggregationDataListener only once
+        storageService.setUpdateAggregationDataListener();
+
+        StreamingQuery query = nodePayloadDatasetDataset.writeStream()
+                .foreachBatch(
+                        (VoidFunction2<Dataset<NodePayload>, Long>) (dataset, batchId) -> {
+                            System.out.println("\n[New Data - Batch: "+batchId+"]\n");
+                            // Processing
+                            dataset = dataCleaningService.removeMissingValues(dataset);
+                            dataset = dataCleaningService.removeNoiseAndIncorrectData(dataset);
+                            dataset.show(); // show dataset after cleaning
+                            dataValidationService.validatePayload(dataset, storageService);
+                            storageService.saveDatasetToRTDB(dataset);
+                        }
+                )
+                .start();
+
+        query.awaitTermination();
+    }
+
+    public static StructType getPayloadSchema(){
         List<StructField> fieldsOfNpkField = new ArrayList<>();
         fieldsOfNpkField.add(new StructField("n", DataTypes.DoubleType, true, Metadata.empty()));
         fieldsOfNpkField.add(new StructField("p", DataTypes.DoubleType, true, Metadata.empty()));
@@ -59,50 +104,12 @@ public class StreamingJob {
         fieldsOfValuesField.add(new StructField("ph", DataTypes.DoubleType, true, Metadata.empty()));
         fieldsOfValuesField.add(new StructField("npk", DataTypes.createStructType(fieldsOfNpkField), true, Metadata.empty()));
 
-        StructType schema = new StructType(new StructField[]{
+        return new StructType(new StructField[]{
                 new StructField("values", DataTypes.createStructType(fieldsOfValuesField), true, Metadata.empty()),
                 new StructField("timestamp", DataTypes.TimestampType, true, Metadata.empty()),
                 new StructField("nodeId", DataTypes.IntegerType, true, Metadata.empty()),
                 new StructField("productId", DataTypes.IntegerType, true, Metadata.empty()),
         });
-
-        df = df.select(functions.col("topic"), functions.col("partition"), functions.col("offset"), functions.from_json(functions.col("value"), schema).alias("data"));
-        df = df.select("topic", "partition", "offset", "data.*");
-
-        Dataset<Row> responseWithSelectedColumns = df.select(functions.col("values"),
-                functions.col("timestamp"), functions.col("nodeId"), functions.col("productId"), functions.col("values").getField("tempSoil")
-                , functions.col("values").getField("tempAir") , functions.col("values").getField("humidity")
-                , functions.col("values").getField("moisture") , functions.col("values").getField("ph")
-                , functions.col("values").getField("npk").getField("n"), functions.col("values").getField("npk").getField("p")
-                , functions.col("values").getField("npk").getField("k"));
-
-        Dataset<NodePayload> nodePayloadDatasetDataset = responseWithSelectedColumns
-                .as(Encoders.bean(NodePayload.class));
-
-        //Processing
-//        nodePayloadDatasetDataset = dataCleaningService.removeMissingValues(nodePayloadDatasetDataset);
-//        nodePayloadDatasetDataset = dataCleaningService.removeNoiseAndIncorrectData(nodePayloadDatasetDataset);
-//        dataValidationService.validatePayload(nodePayloadDatasetDataset, storageService);
-//        storageService.saveDatasetToRTDB(nodePayloadDatasetDataset);
-        storageService.setUpdateAggregationDataListener(); // must be called only once
-
-
-
-//        StreamingQuery query = df.writeStream().format("console").option("truncate", "False").start();
-        StreamingQuery query1 = nodePayloadDatasetDataset.writeStream()
-                .foreachBatch(
-                        (VoidFunction2<Dataset<NodePayload>, Long>) (dataset, batchId) -> {
-                            dataset = dataCleaningService.removeMissingValues(dataset);
-                            dataset = dataCleaningService.removeNoiseAndIncorrectData(dataset);
-                            dataset.show();
-                            dataValidationService.validatePayload(dataset, storageService);
-                            storageService.saveDatasetToRTDB(dataset);
-                        }
-                )
-                .start();
-
-//        query.awaitTermination();
-        query1.awaitTermination();
     }
 
 }
