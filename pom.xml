@@ -13,9 +13,8 @@
         <maven.compiler.target>11</maven.compiler.target>
     </properties>
 
-
     <dependencies>
-
+        <!-- Spark -->
         <dependency>
             <groupId>org.apache.spark</groupId>
             <artifactId>spark-core_2.12</artifactId>
@@ -26,25 +25,16 @@
             <artifactId>spark-streaming_2.12</artifactId>
             <version>3.0.0</version>
         </dependency>
-<!--        <dependency>-->
-<!--            <groupId>org.apache.spark</groupId>-->
-<!--            <artifactId>spark-streaming-kafka_2.10</artifactId>-->
-<!--            <version>1.6.2</version>-->
-<!--        </dependency>-->
-
         <dependency>
             <groupId>org.apache.spark</groupId>
             <artifactId>spark-streaming-kafka-0-10_2.12</artifactId>
             <version>3.0.0</version>
         </dependency>
-
-
-        <!-- For Kafka clients -->
-<!--        <dependency>-->
-<!--            <groupId>org.apache.kafka</groupId>-->
-<!--            <artifactId>kafka-clients</artifactId>-->
-<!--            <version>3.3.0</version>-->
-<!--        </dependency>-->
+        <dependency>
+            <groupId>org.apache.spark</groupId>
+            <artifactId>spark-sql_2.12</artifactId>
+            <version>3.0.0</version>
+        </dependency>
 
         <!-- Kafka -->
         <dependency>
@@ -53,29 +43,7 @@
             <version>0.10.2.2</version>
         </dependency>
 
-        <dependency>
-            <groupId>org.apache.spark</groupId>
-            <artifactId>spark-sql_2.12</artifactId>
-            <version>3.0.0</version>
-        </dependency>
-
-<!--        <dependency>-->
-<!--            <groupId>org.apache.spark</groupId>-->
-<!--            <artifactId>spark-sql-kafka-0-10_2.12</artifactId>-->
-<!--            <version>3.0.0</version>-->
-<!--        </dependency>-->
-
-        <dependency>
-            <groupId>org.apache.maven.plugins</groupId>
-            <artifactId>maven-assembly-plugin</artifactId>
-            <version>3.4.2</version>
-            <type>maven-plugin</type>
-        </dependency>
-
-
-
         <!-- Firebase -->
-
         <dependency>
             <groupId>com.google.firebase</groupId>
             <artifactId>firebase-admin</artifactId>
@@ -86,7 +54,6 @@
             <artifactId>google-cloud-firestore</artifactId>
             <version>3.7.8</version>
         </dependency>
-
     </dependencies>
 
     <build>
@@ -114,7 +81,27 @@
                     </execution>
                 </executions>
             </plugin>
-
+            <!--     Maven-enforcer-plugin       -->
+<!--            <plugin>-->
+<!--                <groupId>org.apache.maven.plugins</groupId>-->
+<!--                <artifactId>maven-enforcer-plugin</artifactId>-->
+<!--                <version>3.1.0</version>-->
+<!--                <executions>-->
+<!--                    <execution>-->
+<!--                        <id>enforce</id>-->
+<!--                        <goals>-->
+<!--                            <goal>enforce</goal>-->
+<!--                        </goals>-->
+<!--                    </execution>-->
+<!--                </executions>-->
+<!--                <configuration>-->
+<!--                    <rules>-->
+<!--                        <requireUpperBoundDeps/>-->
+<!--                        <banDuplicatePomDependencyVersions/>-->
+<!--                        <dependencyConvergence/>-->
+<!--                    </rules>-->
+<!--                </configuration>-->
+<!--            </plugin>-->
         </plugins>
     </build>
 </project>
